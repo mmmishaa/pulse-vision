@@ -1,34 +1,38 @@
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
 import mediapipe as mp
 import cv2
 import numpy as np
 
+from src.utils.paths import FACE_MESH_MODEL_WEIGHTS_PATH
+
 class FaceMeshDetector:
     def __init__(self):
-        mp_face_mesh = mp.solutions.face_mesh
-
-        self.face_mesh = mp_face_mesh.FaceMesh(
-            static_image_mode=False,
-            max_num_faces=1,
-            refine_landmarks=True,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5
+        base_options = python.BaseOptions(model_asset_path=str(FACE_MESH_MODEL_WEIGHTS_PATH))
+        options = vision.FaceLandmarkerOptions(
+            base_options=base_options,
+            running_mode=vision.RunningMode.VIDEO,
+            num_faces=1,
+            min_face_detection_confidence=0.5,
+            min_face_presence_confidence=0.5,
+            min_tracking_confidence=0.5,
         )
+        self.face_mesh = vision.FaceLandmarker.create_from_options(options)
 
     def frame_preprocessing(self, frame):
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        return rgb_frame
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+        return mp_image
 
-    def process(self, frame):
+    def process(self, frame, timestamp_ms):
         rgb_frame = self.frame_preprocessing(frame)
 
-        results = self.face_mesh(rgb_frame)
+        results = self.face_mesh.detect_for_video(rgb_frame, timestamp_ms)
 
-        if results.multi_face_landmarks:
-            face_landmarks = results.multi_face_landmarks[0]
+        if results.face_landmarks:
+            return results.face_landmarks[0]
         else:
             raise RuntimeError("На кадре не обнаружено лицо!")
-
-        return face_landmarks.landmark
 
     def landmarks_to_pixels(self, roi_landmarks: list, frame_dim: tuple):
         height, width = frame_dim
@@ -41,8 +45,8 @@ class FaceMeshDetector:
         return x0, y0, x1, y1
 
 
-    def get_roi_box(self, frame: np.ndarray, roi_indices: list = (10, 67, 109, 151, 297, 338)) -> tuple[float, float, float, float]:
-        landmarks = self.process(frame)
+    def get_roi_box(self, frame: np.ndarray, timestamp_ms, roi_indices: list = (10, 67, 109, 151, 297, 338)) -> tuple[float, float, float, float]:
+        landmarks = self.process(frame, timestamp_ms)
         roi_landmarks = [landmarks[i] for i in roi_indices]
         x = [p.x for p in roi_landmarks]
         y = [p.y for p in roi_landmarks]
