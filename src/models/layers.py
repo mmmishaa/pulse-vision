@@ -37,3 +37,31 @@ class TemporalShiftModule(nn.Module):
         tsm_x = torch.reshape(input=tsm_x, shape=(-1, C, H, W))
 
         return tsm_x
+
+class AttentionMask(nn.Module):
+
+    def __init__(self, in_channels):
+
+        super().__init__()
+
+        self.conv = nn.Conv2d(in_channels=in_channels, out_channels=1, kernel_size=1, bias=True)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x: torch.Tensor):
+        """
+        x: input (B * N, C, H, W) -> output (B * N, C, H, W)
+        """
+
+        raw_attention_mask = self.conv(x) # (B * N, 1, H, W)
+        attention_mask = self.sigmoid(raw_attention_mask) # (B * N, 1, H, W)
+
+        H, W = x.shape[2:]
+        hw = H * W
+
+        eps = 1e-6
+
+        attention_mask = attention_mask * (hw / (eps + 2 * torch.norm(attention_mask, p=1, dim=(1, 2, 3), keepdim=True)))
+
+        masked_x = attention_mask * x
+
+        return masked_x
