@@ -57,3 +57,13 @@ def test_shift_and_batch_isolation():
     ])
 
     assert torch.equal(tsm_x, expected)
+
+def test_backward_gradients():
+    tsm = TemporalShiftModule(n_segment=3, ch_splitter=3)
+    x = torch.randn(size=(6, 4, 2, 2), requires_grad=True)
+    out = tsm(x)
+
+    s = out.sum()
+    s.backward()
+
+    assert x.grad is not None and not torch.isnan(x.grad).any()
