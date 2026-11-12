@@ -40,7 +40,14 @@ def download_mcd_table():
     clear_cache()
 
 def download_mcd_file(filename):
-    ...
+    path = hf_hub_download(
+        repo_type="dataset",
+        repo_id="kyegorov/mcd_rppg", 
+        filename=filename,
+        cache_dir=CACHE_DIR
+    )
+
+    return path
 
 def main():
     METADATA_PATH = MCD_DIR / "metadata.csv"
@@ -49,8 +56,22 @@ def main():
     mcd_df = pd.read_csv(MCD_DIR / "db.csv")
     mcd_df = mcd_df[mcd_df["camera"] == "FullHDwebcam"]
 
+    done = set()
+    if METADATA_PATH.exists():
+        meta_df = pd.read_csv(METADATA_PATH)
+        for row in meta_df.itertuples():
+            done.add((row.patient_id, row.step))
+
     for row in tqdm(mcd_df.itertuples(), total=len(mcd_df), desc="Video processing in MCD-RPPG"):
         try:
+
+            if (
+                (row.patient_id, row.step) in done and 
+                (MCD_DIR / f"frames/{row.patient_id}_{row.step}_frames.npy").exists() and 
+                (MCD_DIR / f"ppg/{row.patient_id}_{row.step}_ppg.npy").exists()
+            ):
+                continue
+
             video_path = row.video
             wave_path = f"ppg_sync_npy/mcd__{row.patient_id}__{row.step}_{row.view}.npy"
 
@@ -65,6 +86,9 @@ def main():
                 MCD_DIR / "frames" / f"{row.patient_id}_{row.step}_frames.npy",
                 MCD_DIR / "ppg" / f"{row.patient_id}_{row.step}_ppg.npy"
             )
+
+            if not num_frames:
+                continue
 
             row_dict = {
                 "patient_id": row.patient_id,
