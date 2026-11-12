@@ -8,3 +8,5 @@ huggingface_hub
 python-dotenv
 pandas
 matplotlib
+kaggle
+six

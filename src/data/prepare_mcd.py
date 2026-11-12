@@ -104,9 +104,10 @@ def main():
             }
 
             pd.DataFrame([row_dict]).to_csv(METADATA_PATH, mode="a", header=not METADATA_PATH.exists(), index=False)
-            break
         finally:
             clear_cache()
+
+    shutil.rmtree(TEMP_DIR, ignore_errors=True)
 
 if __name__ == "__main__":
     main()
