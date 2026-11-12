@@ -4,3 +4,5 @@ mediapipe
 scipy
 torch
 pytest
+huggingface_hub
+python-dotenv
