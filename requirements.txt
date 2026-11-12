@@ -6,3 +6,4 @@ torch
 pytest
 huggingface_hub
 python-dotenv
+pandas
