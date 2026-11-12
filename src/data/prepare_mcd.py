@@ -8,9 +8,12 @@ import numpy as np
 load_dotenv(".env")
 
 from huggingface_hub import hf_hub_download
+from huggingface_hub.utils import disable_progress_bars
 
 from src.utils.paths import DATA_DIR 
 from src.data.preprocess import preprocess 
+
+disable_progress_bars()
 
 TEMP_DIR = DATA_DIR / "temp"
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
@@ -33,7 +36,7 @@ def download_mcd_table():
         repo_type="dataset",
         repo_id="kyegorov/mcd_rppg", 
         filename="db.csv",
-        cache_dir=CACHE_DIR
+        cache_dir=CACHE_DIR,
     )
 
     shutil.copy2(db_path, MCD_DIR / "db.csv")
@@ -44,7 +47,7 @@ def download_mcd_file(filename):
         repo_type="dataset",
         repo_id="kyegorov/mcd_rppg", 
         filename=filename,
-        cache_dir=CACHE_DIR
+        cache_dir=CACHE_DIR,
     )
 
     return path
@@ -80,7 +83,7 @@ def main():
 
             ppg_array = np.load(row_ppg_file)
 
-            num_frames = preprocess(
+            num_frames, checked_frames, detected_faces = preprocess(
                 row_frames_file, 
                 ppg_array,
                 MCD_DIR / "frames" / f"{row.patient_id}_{row.step}_frames.npy",
@@ -96,7 +99,8 @@ def main():
                 "frames_file": f"frames/{row.patient_id}_{row.step}_frames.npy",
                 "ppg_file": f"ppg/{row.patient_id}_{row.step}_ppg.npy",
                 "num_frames": num_frames,
-                "pulse": row.pulse
+                "pulse": row.pulse,
+                "face_detect_ratio": detected_faces / checked_frames
             }
 
             pd.DataFrame([row_dict]).to_csv(METADATA_PATH, mode="a", header=not METADATA_PATH.exists(), index=False)

@@ -32,9 +32,9 @@ class FaceMeshDetector:
         if results.face_landmarks:
             return results.face_landmarks[0]
         else:
-            raise RuntimeError("На кадре не обнаружено лицо!")
+            return None
 
-    def landmarks_to_pixels(self, roi_landmarks: list, frame_dim: tuple):
+    def landmarks_to_pixels(self, roi_landmarks: list, frame_dim: tuple) -> tuple[int, int, int, int]:
         height, width = frame_dim
         lm_x0, lm_y0, lm_x1, lm_y1 = roi_landmarks
         x0 = int(lm_x0 * width)
@@ -45,8 +45,11 @@ class FaceMeshDetector:
         return x0, y0, x1, y1
 
 
-    def get_roi_box(self, frame: np.ndarray, timestamp_ms, roi_indices: list = (10, 67, 109, 151, 297, 338)) -> tuple[float, float, float, float]:
+    def get_roi_box(self, frame: np.ndarray, timestamp_ms, roi_indices: list = (10, 67, 109, 151, 297, 338)) -> tuple[int, int, int, int]:
         landmarks = self.process(frame, timestamp_ms)
+        if landmarks is None: 
+            return None
+
         roi_landmarks = [landmarks[i] for i in roi_indices]
         x = [p.x for p in roi_landmarks]
         y = [p.y for p in roi_landmarks]
@@ -61,4 +64,21 @@ class FaceMeshDetector:
 
         return x0, y0, x1, y1
 
+    def get_face_box(self, frame: np.ndarray, timestamp_ms) -> tuple[int, int, int, int]:
+        landmarks = self.process(frame, timestamp_ms)
+        if landmarks is None: 
+            return None
+
+        x = [p.x for p in landmarks]
+        y = [p.y for p in landmarks]
+
+        x_min, x_max = min(x), max(x)
+        y_min, y_max = min(y), max(y)
+
+        x0, y0, x1, y1 = self.landmarks_to_pixels(
+            roi_landmarks=(x_min, y_min, x_max, y_max),
+            frame_dim=frame.shape[:2]
+        )
+
+        return x0, y0, x1, y1
         
