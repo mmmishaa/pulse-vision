@@ -29,6 +29,9 @@ class Trainer:
         self.train_loss_history = []
         self.val_loss_history = []
 
+        self.use_amp = "cuda" in str(self.device)
+        self.scaler = torch.amp.GradScaler("cuda", enabled=self.use_amp)
+
         self.save_dir.mkdir(parents=True, exist_ok=True)
 
     def validate_one_epoch(self):
@@ -36,12 +39,12 @@ class Trainer:
         epoch_loss = 0.0
 
         with torch.no_grad():
-            for frames, target_ppg in self.val_loader:
-                frames, target_ppg = frames.to(self.device), target_ppg.to(self.device)
-
-                pred = self.model(frames)
-                loss = self.criterion(pred, target_ppg)
-                epoch_loss += loss.item()
+            with torch.amp.autocast("cuda", enabled=self.use_amp):
+                for frames, target_ppg in self.val_loader:
+                    frames, target_ppg = frames.to(self.device), target_ppg.to(self.device)
+                    pred = self.model(frames)
+                    loss = self.criterion(pred, target_ppg)
+                    epoch_loss += loss.item()
 
         epoch_loss = epoch_loss / len(self.val_loader)
         self.val_loss_history.append(epoch_loss)
@@ -56,12 +59,13 @@ class Trainer:
             frames, target_ppg = frames.to(self.device), target_ppg.to(self.device)
 
             self.optimizer.zero_grad()
-            pred = self.model(frames)
+            with torch.amp.autocast("cuda", enabled=self.use_amp):
+                pred = self.model(frames)
+                loss = self.criterion(pred, target_ppg)
 
-            loss = self.criterion(pred, target_ppg)
-            loss.backward()
-
-            self.optimizer.step()
+            self.scaler.scale(loss).backward()
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
 
             epoch_loss += loss.item()
 
