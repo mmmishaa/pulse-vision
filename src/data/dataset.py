@@ -71,3 +71,19 @@ class RPPGDataset(Dataset):
         frames, ppg = self._apply_transform(np_frames, np_ppg)
 
         return frames, ppg
+
+def data_split(metadata_path: Path, val_ratio: float = 0.2, seed: int = 42) -> tuple[pd.DataFrame, pd.DataFrame]:
+    df_patients = pd.read_csv(metadata_path)
+
+    unique_patients = df_patients["patient_id"].unique()
+    rng = np.random.default_rng(seed)
+    shuffled_patients = rng.permutation(unique_patients)
+
+    val_size = int(len(unique_patients) * val_ratio)
+    val_patients = shuffled_patients[:val_size]
+    train_patients = shuffled_patients[val_size:]
+    
+    val_df_patients = df_patients[df_patients["patient_id"].isin(val_patients)].reset_index(drop=True)
+    train_df_patients = df_patients[df_patients["patient_id"].isin(train_patients)].reset_index(drop=True)
+
+    return val_df_patients, train_df_patients
