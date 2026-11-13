@@ -53,8 +53,8 @@ class RPPGDataset(Dataset):
     def _apply_transform(self, frames, ppg):
         ppg = (ppg - ppg.mean()) / (ppg.std() + 1e-7)
 
-        frames = torch.from_numpy(frames)
-        ppg = torch.from_numpy(ppg).float()
+        frames = torch.from_numpy(np.array(frames))
+        ppg = torch.from_numpy(np.array(ppg)).float()
 
         frames = frames.permute(0, 3, 1, 2) # (N, H, W, C) -> (N, C, H, W)
         frames = self.transform_frames(frames)
