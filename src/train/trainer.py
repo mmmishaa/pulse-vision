@@ -15,7 +15,8 @@ class Trainer:
         criterion: nn.Module,
         device: str,
         save_dir: Path,
-        model_name: str
+        model_name: str,
+        lr_scheduler: torch.optim.lr_scheduler.LRScheduler = None
     ):
         self.model = model
         self.train_loader = train_loader
@@ -25,9 +26,11 @@ class Trainer:
         self.device = device
         self.save_dir = save_dir
         self.model_name = model_name
+        self.lr_scheduler = lr_scheduler
 
         self.train_loss_history = []
         self.val_loss_history = []
+        self.lr_history = []
 
         self.use_amp = "cuda" in str(self.device)
         self.scaler = torch.amp.GradScaler("cuda", enabled=self.use_amp)
@@ -79,6 +82,7 @@ class Trainer:
         best_val_loss = float("inf")
         best_epoch = 0
         for epoch in tqdm(range(1, epochs + 1), desc=f"Training"):
+            self.lr_history.append(self.optimizer.param_groups[0]['lr'])
             train_loss = self.train_one_epoch()
             val_loss = self.validate_one_epoch()
 
@@ -89,6 +93,9 @@ class Trainer:
                 best_epoch = epoch
 
                 torch.save(self.model.state_dict(), best_weights_path)
+
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step()
 
         print(f"Training complete. Weights from epoch {best_epoch} loaded. Val Loss: {best_val_loss:.5f}")
         self.model.load_state_dict(torch.load(best_weights_path, map_location=self.device))
