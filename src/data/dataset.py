@@ -8,7 +8,7 @@ from torch.utils.data import Dataset
 
 class RPPGDataset(Dataset):
 
-    def __init__(self, data_path: Path, is_train: bool, df_patients: pd.DataFrame, clip_len: int = 100):
+    def __init__(self, data_path: Path, is_train: bool, df_patients: pd.DataFrame, clip_len: int = 100, stride: int = 200):
 
         """
         df_patients columns:
@@ -34,7 +34,7 @@ class RPPGDataset(Dataset):
                  row.ppg_file,
                  num_sample, 
                  num_sample + clip_len,
-                 ) for num_sample in range(0, row.num_frames - clip_len + 1, clip_len)
+                 ) for num_sample in range(0, row.num_frames - clip_len + 1, stride)
             )
 
         if self.is_train:
@@ -51,6 +51,8 @@ class RPPGDataset(Dataset):
         return len(self.samples)
 
     def _apply_transform(self, frames, ppg):
+        ppg = np.diff(ppg)
+        ppg = np.pad(ppg, (0, 1), mode="edge")
         ppg = (ppg - ppg.mean()) / (ppg.std() + 1e-7)
 
         frames = torch.from_numpy(np.array(frames))
