@@ -65,6 +65,7 @@ def estimate_bpm_from_wave(wave: np.ndarray, fps: int):
     return bpm
 
 def estimate_bpm_from_diff_wave(diff_wave: np.ndarray, fps: int):
-    wave = np.cumsum(diff_wave)
+    diff_wave = diff_wave - np.mean(diff_wave)
+    wave = np.cumsum(diff_wave, dtype=np.float64)
     bpm = estimate_bpm_from_wave(wave=wave, fps=fps)
     return bpm
