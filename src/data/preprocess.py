@@ -3,6 +3,36 @@ import numpy as np
 from pathlib import Path
 import cv2
 
+def prepare_general_face_box(faces: np.ndarray, img_h: int, img_w: int):
+    xmin, ymin = faces[:, :2].min(axis=0)
+    xmax, ymax = faces[:, 2:].max(axis=0)
+
+    cx, cy = (xmax + xmin) / 2, (ymax + ymin) / 2
+
+    max_span = int(max(xmax - xmin, ymax - ymin) * 1.1)
+    side = min(img_h, img_w, max_span)
+
+    x0 = int(cx - side / 2)
+    x1 = x0 + side
+    y0 = int(cy - side / 2)
+    y1 = y0 + side
+
+    if x0 < 0:
+        x1 = side
+        x0 = 0
+    if x1 > img_w:
+        x1 = img_w
+        x0 = img_w - side
+
+    if y0 < 0:
+        y1 = side
+        y0 = 0
+    if y1 > img_h:
+        y1 = img_h
+        y0 = img_h - side
+
+    return x0, y0, x1, y1
+
 def preprocess(frames_file: Path, ppg_array: np.ndarray, frames_path: Path, ppg_path: Path):
     stream = cv2.VideoCapture(str(frames_file))
     face_mesh_detector = FaceMeshDetector()
@@ -35,32 +65,7 @@ def preprocess(frames_file: Path, ppg_array: np.ndarray, frames_path: Path, ppg_
         return None, None, None
     
     faces = np.array(faces)
-    xmin, ymin = faces[:, :2].min(axis=0)
-    xmax, ymax = faces[:, 2:].max(axis=0)
-
-    cx, cy = (xmax + xmin) / 2, (ymax + ymin) / 2
-
-    max_span = int(max(xmax - xmin, ymax - ymin) * 1.1)
-    side = min(img_h, img_w, max_span)
-
-    x0 = int(cx - side / 2)
-    x1 = x0 + side
-    y0 = int(cy - side / 2)
-    y1 = y0 + side
-
-    if x0 < 0:
-        x1 = side
-        x0 = 0
-    if x1 > img_w:
-        x1 = img_w
-        x0 = img_w - side
-
-    if y0 < 0:
-        y1 = side
-        y0 = 0
-    if y1 > img_h:
-        y1 = img_h
-        y0 = img_h - side
+    x0, y0, x1, y1 = prepare_general_face_box(faces, img_h, img_w)
 
     stream = cv2.VideoCapture(str(frames_file))
     cropped_frames = []

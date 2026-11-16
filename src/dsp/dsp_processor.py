@@ -36,7 +36,7 @@ class PulseDSP:
 
         return bpm
 
-def compute_bpm(raw_data: np.ndarray, fps: float, filter_cutoff_frequencies):
+def compute_bpm(raw_data: np.ndarray, fps: float, filter_cutoff_frequencies = [0.75, 2.5]):
     filtered_data = apply_filter(raw_data=raw_data, fps=fps, filter_cutoff_frequencies=filter_cutoff_frequencies)
     amplitudes, freqs = compute_fft(filtered_data=filtered_data, fps=fps)
     mask = (freqs >= filter_cutoff_frequencies[0]) & (freqs <= filter_cutoff_frequencies[1])
@@ -48,7 +48,7 @@ def compute_bpm(raw_data: np.ndarray, fps: float, filter_cutoff_frequencies):
 
     return bpm
 
-def compute_fft(filtered_data: np.ndarray, fps, n: int = 2048):
+def compute_fft(filtered_data: np.ndarray, fps: float, n: int = 2048):
     fft_values = np.fft.rfft(a=filtered_data, n=n)
     amplitudes = np.abs(fft_values)
     freqs = np.fft.rfftfreq(n=n, d=1/fps)
@@ -59,12 +59,12 @@ def apply_filter(raw_data: np.ndarray, fps: float, filter_cutoff_frequencies) ->
     filtered_data = scipy.signal.filtfilt(b, a, raw_data)
     return filtered_data
 
-def estimate_bpm_from_wave(wave: np.ndarray, fps: int):
+def estimate_bpm_from_wave(wave: np.ndarray, fps: float):
     filter_cutoff_frequencies=[0.75, 2.5]
     bpm = compute_bpm(raw_data=wave, fps=fps, filter_cutoff_frequencies=filter_cutoff_frequencies)
     return bpm
 
-def estimate_bpm_from_diff_wave(diff_wave: np.ndarray, fps: int):
+def estimate_bpm_from_diff_wave(diff_wave: np.ndarray, fps: float):
     diff_wave = diff_wave - np.mean(diff_wave)
     wave = np.cumsum(diff_wave, dtype=np.float64)
     bpm = estimate_bpm_from_wave(wave=wave, fps=fps)
